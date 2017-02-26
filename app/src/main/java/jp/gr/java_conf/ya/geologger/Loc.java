@@ -15,16 +15,19 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Date;
 
-public class Loc extends Service  implements LocationListener, GpsStatus.Listener {
+public class Loc extends Service implements LocationListener, GpsStatus.Listener {
     private ArrayList<Location> locationList;
     private boolean flgLocationManager, flgLogging;
-    private static final int GPS_INTERVAL = 10000;
-    private static final int GPS_DISTANCE = 0;
+    private static final int GPS_INTERVAL = -1;
+    private static final int GPS_DISTANCE = -1;
     private LocationManager locationManager;
     private final LocationServiceBinder binder = new LocationServiceBinder();
+    private SqliteUtil sqliteUtil;
 
     public class LocationServiceBinder extends Binder {
         public Loc getService() {
@@ -32,7 +35,8 @@ public class Loc extends Service  implements LocationListener, GpsStatus.Listene
         }
     }
 
-    private void notifyLocationProviderStatusUpdated(boolean isLocationProviderAvailable) {}
+    private void notifyLocationProviderStatusUpdated(boolean isLocationProviderAvailable) {
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -48,10 +52,10 @@ public class Loc extends Service  implements LocationListener, GpsStatus.Listene
 
     @Override
     public void onDestroy() {
-        if(locationManager == null)
+        if (locationManager == null)
             locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        try{
-            if ( Build.VERSION.SDK_INT >= 23 &&ContextCompat.checkSelfPermission( this, android.Manifest.permission.ACCESS_COARSE_LOCATION ) != PackageManager.PERMISSION_GRANTED )
+        try {
+            if (Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
                 locationManager.removeUpdates(this);
         } catch (SecurityException e) {
         } catch (RuntimeException e) {
@@ -59,16 +63,24 @@ public class Loc extends Service  implements LocationListener, GpsStatus.Listene
         }
     }
 
-    public void onGpsStatusChanged(int event) {}
+    public void onGpsStatusChanged(int event) {
+    }
 
     @Override
     public void onLocationChanged(final Location newLocation) {
-        if(flgLogging) {
+        if (flgLogging) {
             locationList.add(newLocation);
 
+            // Intent発行
             final Intent intent = new Intent("LocationUpdated");
             intent.putExtra("location", newLocation);
             LocalBroadcastManager.getInstance(this.getApplication()).sendBroadcast(intent);
+
+            // SQLite DBに挿入
+            if (sqliteUtil == null)
+                sqliteUtil = new SqliteUtil(this);
+            final Date date = new Date();
+            sqliteUtil.insertLoc(date, newLocation);
         }
     }
 
@@ -85,7 +97,8 @@ public class Loc extends Service  implements LocationListener, GpsStatus.Listene
     }
 
     @Override
-    public void onRebind(Intent intent) {}
+    public void onRebind(Intent intent) {
+    }
 
     @Override
     public int onStartCommand(Intent i, int flags, int startId) {
@@ -116,16 +129,17 @@ public class Loc extends Service  implements LocationListener, GpsStatus.Listene
         return true;
     }
 
-    public void startLogging(){
+    public void startLogging() {
         flgLogging = true;
     }
 
     public void startUpdatingLocation() {
-        if(this.flgLocationManager == false){
+
+        if (flgLocationManager == false) {
             flgLocationManager = true;
             locationList.clear();
 
-            if(locationManager == null)
+            if (locationManager == null)
                 locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
             try {
                 final Criteria criteria = new Criteria();
@@ -146,15 +160,15 @@ public class Loc extends Service  implements LocationListener, GpsStatus.Listene
         }
     }
 
-    public void stopLogging(){
+    public void stopLogging() {
         flgLogging = false;
     }
 
-    public void stopUpdatingLocation(){
-        if(this.flgLocationManager){
-            if(locationManager == null)
+    public void stopUpdatingLocation() {
+        if (this.flgLocationManager) {
+            if (locationManager == null)
                 locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-            if ( Build.VERSION.SDK_INT >= 23 &&ContextCompat.checkSelfPermission( this, android.Manifest.permission.ACCESS_COARSE_LOCATION ) != PackageManager.PERMISSION_GRANTED )
+            if (Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
                 locationManager.removeUpdates(this);
             flgLocationManager = false;
         }

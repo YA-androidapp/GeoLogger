@@ -1,18 +1,23 @@
 package jp.gr.java_conf.ya.geologger; // Copyright (c) 2017 YA <ya.androidapp@gmail.com> All rights reserved. This software includes the work that is distributed in the Apache License 2.0
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -46,16 +51,19 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 final ListView listView = (ListView) parent;
                 final String item = (((String) listView.getItemAtPosition(position)).split(";"))[0];
-                final Uri uri = Uri.parse("geo:"+item+"?z=15");
+                final Uri uri = Uri.parse("geo:" + item + "?z=15");
                 final Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                 startActivity(intent);
             }
         });
         listView1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {}
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+            }
+
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
         });
         listView1.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
@@ -93,7 +101,8 @@ public class MainActivity extends AppCompatActivity {
             public void onReceive(Context context, Intent intent) {
                 final Location location = intent.getParcelableExtra("location");
                 final Date date = new Date();
-                adapter.add(location.getLatitude()+","+location.getLongitude()+"; "+df.format(date));
+                final String row = location.getLatitude() + "," + location.getLongitude() + "; " + df.format(date);
+                adapter.insert(row, 0);
             }
         };
         LocalBroadcastManager.getInstance(this).registerReceiver(
@@ -104,10 +113,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if(loc!=null)
+        if (loc != null)
             loc.stopLogging();
 
         super.onDestroy();
+    }
+
+    // 位置情報Permissionが許可されているか判定する
+    private Boolean permissionsGranted() {
+        return (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
     }
 
     private ServiceConnection serviceConnection = new ServiceConnection() {
@@ -115,13 +129,18 @@ public class MainActivity extends AppCompatActivity {
             final String name = className.getClassName();
             if (name.endsWith("Loc")) {
                 loc = ((Loc.LocationServiceBinder) service).getService();
-                loc.startUpdatingLocation();
+                if (!permissionsGranted()) {
+                    ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                } else {
+                    loc.startUpdatingLocation();
+                }
             }
         }
 
         public void onServiceDisconnected(ComponentName className) {
             if (className.getClassName().equals("Loc")) {
-                loc.stopUpdatingLocation();
+                if (loc != null)
+                    loc.stopUpdatingLocation();
                 loc = null;
             }
         }
