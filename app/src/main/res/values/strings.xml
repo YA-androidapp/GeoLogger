@@ -2,5 +2,6 @@
     <string name="app_name">GeoLogger</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
+    <string name="write">Write</string>
 </resources><!-- Copyright (c) 2017 YA <ya.androidapp@gmail.com> All rights reserved. This software includes the work that is distributed in the Apache License 2.0 -->
 

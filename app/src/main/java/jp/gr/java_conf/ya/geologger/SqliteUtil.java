@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.location.Location;
+import android.util.Log;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -13,21 +14,21 @@ import java.util.Date;
 
 
 public class SqliteUtil extends SQLiteOpenHelper {
-    private static final DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+    public static final DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
     private static final int DB_VERSION = 1;
 
-    private static final String DB_NAME = "geologger";
+    public static final String DB_NAME = "geologger";
 
     private static final String DB_FILENAME = DB_NAME + ".db";
 
-    private static final String COL_ID = "_id";
-    private static final String COL_DATE = "date";
-    private static final String COL_LAT = "lat";
-    private static final String COL_LNG = "lng";
-    private static final String COL_COSLAT = "coslat";
-    private static final String COL_COSLNG = "coslng";
-    private static final String COL_SINLAT = "sinlat";
-    private static final String COL_SINLNG = "sinlng";
+    public static final String COL_ID = "_id";
+    public static final String COL_DATE = "date";
+    public static final String COL_LAT = "lat";
+    public static final String COL_LNG = "lng";
+    public static final String COL_COSLAT = "coslat";
+    public static final String COL_COSLNG = "coslng";
+    public static final String COL_SINLAT = "sinlat";
+    public static final String COL_SINLNG = "sinlng";
 
     private static final String TYPE_ID = "integer primary key autoincrement";
     private static final String TYPE_DATE = "text not null";
@@ -38,7 +39,7 @@ public class SqliteUtil extends SQLiteOpenHelper {
     private static final String TYPE_SINLAT = "real not null";
     private static final String TYPE_SINLNG = "real not null";
 
-    private static final String SQL_CREATE_TABLE = "create table " + DB_NAME +
+    public static final String SQL_CREATE_TABLE = "create table " + DB_NAME +
             " ( " +
             COL_ID + " " + TYPE_ID + ", " +
             COL_DATE + " " + TYPE_DATE + ", " +
@@ -49,7 +50,8 @@ public class SqliteUtil extends SQLiteOpenHelper {
             COL_SINLAT + " " + TYPE_SINLAT + ", " +
             COL_SINLNG + " " + TYPE_SINLNG +
             " );";
-    private static final String SQL_DROP_TABLE = "drop table if exists " + DB_NAME + ";";
+    public static final String SQL_DROP_TABLE = "drop table if exists " + DB_NAME + ";";
+    public static final String SQL_SELECT = "SELECT " + COL_DATE + " , " + COL_LAT + ", " + COL_LNG + " FROM " + DB_NAME + "";
 
     public SqliteUtil(Context c) {
         super(c, DB_FILENAME, null, DB_VERSION);
@@ -68,9 +70,9 @@ public class SqliteUtil extends SQLiteOpenHelper {
 
     // ログ記録
     public void insertLoc(Date date, Location location) {
-        SQLiteDatabase db = getReadableDatabase();
+        final SQLiteDatabase db = getReadableDatabase();
         try {
-            ContentValues values = new ContentValues();
+            final ContentValues values = new ContentValues();
             values.put(COL_DATE, df.format(date));
             values.put(COL_LAT, location.getLatitude());
             values.put(COL_LNG, location.getLongitude());
@@ -83,15 +85,18 @@ public class SqliteUtil extends SQLiteOpenHelper {
         } finally {
             db.close();
         }
+
+        // Log.w("SqliteUtil", select());
     }
 
     // 非記録エリア判定用
     public String searchNear(Location location, double range_km) {
-        SQLiteDatabase db = getReadableDatabase();
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
+
+        final SQLiteDatabase db = getReadableDatabase();
         try {
-            String sql = searchNearQuery(location, range_km);
-            Cursor cursor = db.rawQuery(sql, null);
+            final String sql = searchNearQuery(location, range_km);
+            final Cursor cursor = db.rawQuery(sql, null);
             while (cursor.moveToNext()) {
                 sb.append(cursor.getInt(0));
                 sb.append("," + cursor.getString(1));
@@ -108,10 +113,10 @@ public class SqliteUtil extends SQLiteOpenHelper {
 
     // 非記録エリア判定用
     public int searchNearCount(Location location, double range_km) {
-        SQLiteDatabase db = getReadableDatabase();
+        final SQLiteDatabase db = getReadableDatabase();
         try {
-            String sql = searchNearQuery(location, range_km);
-            Cursor cursor = db.rawQuery(sql, null);
+            final String sql = searchNearQuery(location, range_km);
+            final Cursor cursor = db.rawQuery(sql, null);
             final int count = cursor.getColumnCount();
             db.close();
             return count;
@@ -124,17 +129,39 @@ public class SqliteUtil extends SQLiteOpenHelper {
     // 非記録エリア判定用
     // http://strai.x0.com/?p=200
     public String searchNearQuery(Location location, double range_km) {
-        double km_cos = Math.cos(range_km / 6371);    // 距離基準cos値
-        double radlat = Math.toRadians(location.getLatitude()), radlong = Math.toRadians(location.getLongitude());
-        double qsinlat = Math.sin(radlat), qcoslat = Math.cos(radlat);
-        double qsinlng = Math.sin(radlong), qcoslng = Math.cos(radlong);
+        final double km_cos = Math.cos(range_km / 6371);    // 距離基準cos値
+        final double radlat = Math.toRadians(location.getLatitude()), radlong = Math.toRadians(location.getLongitude());
+        final double qsinlat = Math.sin(radlat), qcoslat = Math.cos(radlat);
+        final double qsinlng = Math.sin(radlong), qcoslng = Math.cos(radlong);
 
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         sb.append("SELECT " + COL_ID + " ");
         sb.append("(" + COL_SINLAT + "*" + qsinlat + " + " + COL_COSLAT + "*" + qcoslat + "*(" + COL_COSLNG + "*" + qcoslng + "+" + COL_SINLNG + "*" + qsinlng + ")) AS distcos ");
         sb.append(" FROM " + DB_NAME + " ");
         sb.append(" WHERE distcos > " + km_cos); // 値が大きい方が近い
         sb.append(" ORDER BY distcos DESC ");
+        return sb.toString();
+    }
+
+    // 全件取得
+    public String select() {
+        final StringBuilder sb = new StringBuilder();
+
+        final SQLiteDatabase db = getReadableDatabase();
+        try {
+            final Cursor cursor = db.rawQuery(SQL_SELECT, null);
+            cursor.moveToFirst();
+            for (int i = 0; i < cursor.getCount(); i++) {
+                sb.append(cursor.getString(0)).append(",");
+                sb.append(cursor.getDouble(1)).append(",");
+                sb.append(cursor.getDouble(2)).append("\n");
+                cursor.moveToNext();
+            }
+            cursor.close();
+        } finally {
+            db.close();
+        }
+
         return sb.toString();
     }
 }
