@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -14,6 +15,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
@@ -33,16 +35,48 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
-    public Loc loc;
+    private Loc loc;
     private ArrayAdapter<String> adapter;
     private BroadcastReceiver locationUpdateReceiver;
     private Button startButton, stopButton, writeButton;
     private DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
     private ListView listView1;
 
+    // 設定値
+    private boolean enable_offset;
+    private boolean enable_add_random_error_to_offset;
+    private boolean enable_exception_area;
+    private double offset_lat;
+    private double offset_lng;
+    private double exception_areas_radius;
+    private double exception_areas_centers;
+
+    private boolean init() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        enable_offset = sharedPreferences.getBoolean("enable_offset", false);
+        enable_add_random_error_to_offset = sharedPreferences.getBoolean("enable_add_random_error_to_offset", false);
+        enable_exception_area = sharedPreferences.getBoolean("enable_exception_area", false);
+
+        offset_lat = Double.parseDouble(sharedPreferences.getString("offset_lat", "0.0"));
+        offset_lng = Double.parseDouble(sharedPreferences.getString("offset_lng", "0.0"));
+        exception_areas_radius = Double.parseDouble(sharedPreferences.getString("exception_areas_radius", "0.0"));
+        exception_areas_centers = Double.parseDouble(sharedPreferences.getString("exception_areas_centers", "0.0"));
+
+        return true;
+    }
+
+    // 位置情報Permissionが許可されているか判定する
+    private boolean locationPermissionGranted() {
+        return (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        init();
+
         setContentView(R.layout.activity_main);
 
         // ListViewを準備
@@ -137,16 +171,6 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-    // 位置情報Permissionが許可されているか判定する
-    private Boolean locationPermissionGranted() {
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
-    }
-
-    // ストレージ書出しPermissionが許可されているか判定する
-    private Boolean storagePermissionGranted() {
-        return (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
-    }
-
     private ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
             final String name = className.getClassName();
@@ -168,4 +192,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
+
+    // ストレージ書出しPermissionが許可されているか判定する
+    private boolean storagePermissionGranted() {
+        return (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
+    }
 }

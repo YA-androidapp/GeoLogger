@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <CheckBoxPreference
+        android:key="enable_offset"
+        android:summary="@string/enable_offset_summary"
+        android:title="@string/enable_offset" />
+
+    <EditTextPreference
+        android:dialogTitle="@string/offset_lat"
+        android:inputType="numberSigned|numberDecimal"
+        android:key="offset_lat"
+        android:summary="@string/offset_lat_summary"
+        android:title="@string/offset_lat" />
+
+    <EditTextPreference
+        android:dialogTitle="@string/offset_lng"
+        android:inputType="numberSigned|numberDecimal"
+        android:key="offset_lng"
+        android:summary="@string/offset_lng_summary"
+        android:title="@string/offset_lng" />
+
+    <CheckBoxPreference
+        android:key="enable_add_random_error_to_offset"
+        android:summary="@string/enable_add_random_error_to_offset_summary"
+        android:title="@string/enable_add_random_error_to_offset" />
+
+    <CheckBoxPreference
+        android:key="enable_exception_area"
+        android:summary="@string/enable_exception_area_summary"
+        android:title="@string/enable_exception_area" />
+
+    <EditTextPreference
+        android:dialogTitle="@string/exception_areas_radius"
+        android:inputType="numberDecimal"
+        android:key="exception_areas_radius"
+        android:summary="@string/exception_areas_radius_summary"
+        android:title="@string/exception_areas_radius" />
+
+    <EditTextPreference
+        android:dialogTitle="@string/exception_areas_centers"
+        android:key="exception_areas_centers"
+        android:summary="@string/exception_areas_centers_summary"
+        android:title="@string/exception_areas_centers" />
+
+</PreferenceScreen>

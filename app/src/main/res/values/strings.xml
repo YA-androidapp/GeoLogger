@@ -1,5 +1,19 @@
 <resources>
     <string name="app_name">GeoLogger</string>
+    <string name="enable_add_random_error_to_offset">ランダムな誤差</string>
+    <string name="enable_add_random_error_to_offset_summary">オフセットにランダムな誤差を含ませる</string>
+    <string name="enable_exception_area">例外区域を有効にする</string>
+    <string name="enable_exception_area_summary">測位結果を記録しない地域を指定します</string>
+    <string name="enable_offset">オフセットを有効にする</string>
+    <string name="enable_offset_summary">常に一定の変位を加えて現在位置を出力します</string>
+    <string name="exception_areas_centers">例外区域の中心座標</string>
+    <string name="exception_areas_centers_summary">例外区域の中心座標をセミコロン区切りで指定します(例：35.0,135.0;36.0,136.0)</string>
+    <string name="exception_areas_radius">例外区域の半径</string>
+    <string name="exception_areas_radius_summary">例外区域の半径を指定します(単位：メートル)</string>
+    <string name="offset_lat">緯度オフセット</string>
+    <string name="offset_lat_summary">測位した緯度に加えるオフセットを指定します</string>
+    <string name="offset_lng">経度オフセット</string>
+    <string name="offset_lng_summary">測位した経度に加えるオフセットを指定します</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="write">Write</string>
