@@ -1,4 +1,4 @@
-package jp.gr.java_conf.ya.geologger;
+package jp.gr.java_conf.ya.geologger; // Copyright (c) 2017 YA <ya.androidapp@gmail.com> All rights reserved. This software includes the work that is distributed in the Apache License 2.0
 
 import android.os.Environment;
 
@@ -22,15 +22,14 @@ public class FileUtil {
             final File file = new File(filePath);
             file.getParentFile().mkdir();
 
-            FileOutputStream fos;
             try {
-                fos = new FileOutputStream(file, true);
+                final FileOutputStream fos = new FileOutputStream(file, true);
                 final OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
                 final BufferedWriter bw = new BufferedWriter(osw);
                 bw.write(content);
                 bw.flush();
                 bw.close();
-                return "";
+                return filename;
             } catch (Exception e) {
                 return e.getMessage();
             }

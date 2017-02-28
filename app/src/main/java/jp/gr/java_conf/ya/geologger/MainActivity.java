@@ -4,29 +4,27 @@ import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.net.Uri;
-import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
-import android.support.v4.widget.SimpleCursorAdapter;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -38,18 +36,21 @@ public class MainActivity extends AppCompatActivity {
     private Loc loc;
     private ArrayAdapter<String> adapter;
     private BroadcastReceiver locationUpdateReceiver;
-    private Button startButton, stopButton, writeButton;
-    private DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+    private Button clearButton, clearExceptionAreaButton, insertExceptionAreaButton, startButton, stopButton, writeButton;
+    private static final DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+    private EditText exceptionAreaCenterLat, exceptionAreaCenterLng;
     private ListView listView1;
+
+    private static final String filenameExc = "GeoLoggerExc.txt";
+    private static final String filenameLog = "GeoLoggerLog.txt";
 
     // 設定値
     private boolean enable_offset;
     private boolean enable_add_random_error_to_offset;
     private boolean enable_exception_area;
+    private double exception_areas_radius;
     private double offset_lat;
     private double offset_lng;
-    private double exception_areas_radius;
-    private double exception_areas_centers;
 
     private boolean init() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -57,11 +58,21 @@ public class MainActivity extends AppCompatActivity {
         enable_offset = sharedPreferences.getBoolean("enable_offset", false);
         enable_add_random_error_to_offset = sharedPreferences.getBoolean("enable_add_random_error_to_offset", false);
         enable_exception_area = sharedPreferences.getBoolean("enable_exception_area", false);
-
-        offset_lat = Double.parseDouble(sharedPreferences.getString("offset_lat", "0.0"));
-        offset_lng = Double.parseDouble(sharedPreferences.getString("offset_lng", "0.0"));
-        exception_areas_radius = Double.parseDouble(sharedPreferences.getString("exception_areas_radius", "0.0"));
-        exception_areas_centers = Double.parseDouble(sharedPreferences.getString("exception_areas_centers", "0.0"));
+        try {
+            exception_areas_radius = Double.parseDouble(sharedPreferences.getString("exception_areas_radius", "0.0"));
+        }catch (Exception e){
+            exception_areas_radius = 0;
+        }
+        try {
+            offset_lat = Double.parseDouble(sharedPreferences.getString("offset_lat", "0.0"));
+        }catch (Exception e){
+            offset_lat = 0;
+        }
+        try {
+            offset_lng = Double.parseDouble(sharedPreferences.getString("offset_lng", "0.0"));
+        }catch (Exception e){
+            offset_lng = 0;
+        }
 
         return true;
     }
@@ -78,6 +89,10 @@ public class MainActivity extends AppCompatActivity {
         init();
 
         setContentView(R.layout.activity_main);
+
+        // EditTextを準備
+        exceptionAreaCenterLat = (EditText) findViewById(R.id.exceptionAreaCenterLat);
+        exceptionAreaCenterLng = (EditText) findViewById(R.id.exceptionAreaCenterLng);
 
         // ListViewを準備
         listView1 = (ListView) findViewById(R.id.listView1);
@@ -110,9 +125,82 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Buttonを準備
+        clearButton = (Button) this.findViewById(R.id.clearButton);
+        clearExceptionAreaButton = (Button) this.findViewById(R.id.clearExceptionAreaButton);
+        insertExceptionAreaButton = (Button) this.findViewById(R.id.insertExceptionAreaButton);
         startButton = (Button) this.findViewById(R.id.startButton);
         stopButton = (Button) this.findViewById(R.id.stopButton);
         writeButton = (Button) this.findViewById(R.id.writeButton);
+
+        clearButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 確認後、全件削除
+                try {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle(R.string.clear_all_locations)
+                            .setMessage(R.string.confirm_clear)
+                            .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    final SqliteUtil sqliteUtil = new SqliteUtil(MainActivity.this);
+                                    sqliteUtil.clearAllLogs();
+
+                                    Toast.makeText(MainActivity.this, getString(R.string.done),Toast.LENGTH_SHORT).show();
+                                }
+                            })
+                            .setNegativeButton(R.string.cancel, null)
+                            .show();
+                } catch (Exception e) {
+                }
+            }
+        });
+        clearExceptionAreaButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 確認後、全件削除
+                try {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle(R.string.clear_all_exception_areas)
+                            .setMessage(R.string.confirm_clear)
+                            .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    SqliteUtil sqliteUtil = new SqliteUtil(MainActivity.this);
+                                    sqliteUtil.clearAllExceptionAreas();
+
+                                    Toast.makeText(MainActivity.this, getString(R.string.done),Toast.LENGTH_SHORT).show();
+                                }
+                            })
+                            .setNegativeButton(R.string.cancel, null)
+                            .show();
+                } catch (Exception e) {
+                }
+            }
+        });
+        insertExceptionAreaButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if( (!exceptionAreaCenterLat.getText().toString().equals("")) && (!exceptionAreaCenterLng.getText().toString().equals("")) ) {
+                    double lat, lng;
+                    try {
+                        lat = Double.parseDouble(exceptionAreaCenterLat.getText().toString());
+                    } catch (Exception e) {
+                        lat = 0;
+                    }
+                    try {
+                        lng = Double.parseDouble(exceptionAreaCenterLng.getText().toString());
+                    } catch (Exception e) {
+                        lng = 0;
+                    }
+
+                    final SqliteUtil sqliteUtil = new SqliteUtil(MainActivity.this);
+                    sqliteUtil.insertExceptionArea(lat, lng);
+
+                    Toast.makeText(MainActivity.this, (exceptionAreaCenterLat.getText().toString() + "," + exceptionAreaCenterLng.getText().toString()), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -135,11 +223,17 @@ public class MainActivity extends AppCompatActivity {
                 if (!storagePermissionGranted()) {
                     ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 2);
                 } else {
-                    final String result = FileUtil.writeFile(
-                            "GeoLogger.csv",
-                            (new SqliteUtil(MainActivity.this)).select()
+                    final String resultLog = FileUtil.writeFile(
+                            filenameLog,
+                            (new SqliteUtil(MainActivity.this)).selectAllLogs()
                     );
-                    Toast.makeText(MainActivity.this, result, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, resultLog, Toast.LENGTH_SHORT).show();
+
+                    final String resultExc = FileUtil.writeFile(
+                            filenameExc,
+                            (new SqliteUtil(MainActivity.this)).selectAllExceptionAreas()
+                    );
+                    Toast.makeText(MainActivity.this, resultExc, Toast.LENGTH_SHORT).show();
                 }
             }
         });

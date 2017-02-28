@@ -2,6 +2,7 @@ package jp.gr.java_conf.ya.geologger; // Copyright (c) 2017 YA <ya.androidapp@gm
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.GpsStatus;
@@ -13,6 +14,7 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -21,8 +23,10 @@ import java.util.ArrayList;
 import java.util.Date;
 
 public class Loc extends Service implements LocationListener, GpsStatus.Listener {
-    private ArrayList<Location> locationList;
+    // private ArrayList<Location> locationList;
     private boolean flgLocationManager, flgLogging;
+    private double offset_lat;
+    private double offset_lng;
     private static final int GPS_INTERVAL = -1;
     private static final int GPS_DISTANCE = -1;
     private LocationManager locationManager;
@@ -47,7 +51,7 @@ public class Loc extends Service implements LocationListener, GpsStatus.Listener
     public void onCreate() {
         flgLocationManager = false;
         flgLogging = false;
-        locationList = new ArrayList<>();
+        // locationList = new ArrayList<>();
     }
 
     @Override
@@ -67,20 +71,38 @@ public class Loc extends Service implements LocationListener, GpsStatus.Listener
     }
 
     @Override
-    public void onLocationChanged(final Location newLocation) {
+    public void onLocationChanged(Location location) {
         if (flgLogging) {
-            locationList.add(newLocation);
+            // locationList.add(location);
+
+            final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+            try {
+                offset_lat = Double.parseDouble(sharedPreferences.getString("offset_lat", "0.0"));
+            }catch (Exception e){
+                offset_lat = 0;
+            }
+            try {
+                offset_lng = Double.parseDouble(sharedPreferences.getString("offset_lng", "0.0"));
+            }catch (Exception e){
+                offset_lng = 0;
+            }
+            if(offset_lat != 0 || offset_lng != 0) {
+                final Location newLocation = new Location(location);
+                newLocation.setLatitude(location.getLatitude() + offset_lat);
+                newLocation.setLatitude(location.getLongitude() + offset_lng);
+                location = newLocation;
+            }
 
             // Intent発行
             final Intent intent = new Intent("LocationUpdated");
-            intent.putExtra("location", newLocation);
+            intent.putExtra("location", location);
             LocalBroadcastManager.getInstance(this.getApplication()).sendBroadcast(intent);
 
             // SQLite DBに挿入
             if (sqliteUtil == null)
                 sqliteUtil = new SqliteUtil(this);
             final Date date = new Date();
-            sqliteUtil.insertLoc(date, newLocation);
+            sqliteUtil.insertLog(date, location);
         }
     }
 
@@ -137,7 +159,7 @@ public class Loc extends Service implements LocationListener, GpsStatus.Listener
 
         if (flgLocationManager == false) {
             flgLocationManager = true;
-            locationList.clear();
+            // locationList.clear();
 
             if (locationManager == null)
                 locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
