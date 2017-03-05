@@ -8,24 +8,22 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.net.Uri;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import java.text.DateFormat;
@@ -34,48 +32,14 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
     private Loc loc;
-    private ArrayAdapter<String> adapter;
+    private SimpleCursorAdapter adapter;
     private BroadcastReceiver locationUpdateReceiver;
     private Button clearButton, clearExceptionAreaButton, insertExceptionAreaButton, startButton, stopButton, writeButton;
     private static final DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
     private EditText exceptionAreaCenterLat, exceptionAreaCenterLng;
-    private ListView listView1;
-
     private static final String filenameExc = "GeoLoggerExc.txt";
     private static final String filenameLog = "GeoLoggerLog.txt";
-
-    // 設定値
-    private boolean enable_offset;
-    private boolean enable_add_random_error_to_offset;
-    private boolean enable_exception_area;
-    private double exception_areas_radius;
-    private double offset_lat;
-    private double offset_lng;
-
-    private boolean init() {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-
-        enable_offset = sharedPreferences.getBoolean("enable_offset", false);
-        enable_add_random_error_to_offset = sharedPreferences.getBoolean("enable_add_random_error_to_offset", false);
-        enable_exception_area = sharedPreferences.getBoolean("enable_exception_area", false);
-        try {
-            exception_areas_radius = Double.parseDouble(sharedPreferences.getString("exception_areas_radius", "0.0"));
-        }catch (Exception e){
-            exception_areas_radius = 0;
-        }
-        try {
-            offset_lat = Double.parseDouble(sharedPreferences.getString("offset_lat", "0.0"));
-        }catch (Exception e){
-            offset_lat = 0;
-        }
-        try {
-            offset_lng = Double.parseDouble(sharedPreferences.getString("offset_lng", "0.0"));
-        }catch (Exception e){
-            offset_lng = 0;
-        }
-
-        return true;
-    }
+    private EditText resultText;
 
     // 位置情報Permissionが許可されているか判定する
     private boolean locationPermissionGranted() {
@@ -86,43 +50,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        init();
-
         setContentView(R.layout.activity_main);
 
         // EditTextを準備
         exceptionAreaCenterLat = (EditText) findViewById(R.id.exceptionAreaCenterLat);
         exceptionAreaCenterLng = (EditText) findViewById(R.id.exceptionAreaCenterLng);
-
-        // ListViewを準備
-        listView1 = (ListView) findViewById(R.id.listView1);
-        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
-        listView1.setAdapter(adapter);
-        listView1.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                final ListView listView = (ListView) parent;
-                final String item = (((String) listView.getItemAtPosition(position)).split(";"))[0];
-                final Uri uri = Uri.parse("geo:" + item + "?z=15");
-                final Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                startActivity(intent);
-            }
-        });
-        listView1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-        listView1.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                return false;
-            }
-        });
 
         // Buttonを準備
         clearButton = (Button) this.findViewById(R.id.clearButton);
@@ -131,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         startButton = (Button) this.findViewById(R.id.startButton);
         stopButton = (Button) this.findViewById(R.id.stopButton);
         writeButton = (Button) this.findViewById(R.id.writeButton);
+        resultText = (EditText) this.findViewById(R.id.resultText);
 
         clearButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -146,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
                                     final SqliteUtil sqliteUtil = new SqliteUtil(MainActivity.this);
                                     sqliteUtil.clearAllLogs();
 
-                                    Toast.makeText(MainActivity.this, getString(R.string.done),Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(MainActivity.this, getString(R.string.done), Toast.LENGTH_SHORT).show();
                                 }
                             })
                             .setNegativeButton(R.string.cancel, null)
@@ -169,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
                                     SqliteUtil sqliteUtil = new SqliteUtil(MainActivity.this);
                                     sqliteUtil.clearAllExceptionAreas();
 
-                                    Toast.makeText(MainActivity.this, getString(R.string.done),Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(MainActivity.this, getString(R.string.done), Toast.LENGTH_SHORT).show();
                                 }
                             })
                             .setNegativeButton(R.string.cancel, null)
@@ -181,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
         insertExceptionAreaButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if( (!exceptionAreaCenterLat.getText().toString().equals("")) && (!exceptionAreaCenterLng.getText().toString().equals("")) ) {
+                if ((!exceptionAreaCenterLat.getText().toString().equals("")) && (!exceptionAreaCenterLng.getText().toString().equals(""))) {
                     double lat, lng;
                     try {
                         lat = Double.parseDouble(exceptionAreaCenterLat.getText().toString());
@@ -196,8 +129,6 @@ public class MainActivity extends AppCompatActivity {
 
                     final SqliteUtil sqliteUtil = new SqliteUtil(MainActivity.this);
                     sqliteUtil.insertExceptionArea(lat, lng);
-
-                    Toast.makeText(MainActivity.this, (exceptionAreaCenterLat.getText().toString() + "," + exceptionAreaCenterLng.getText().toString()), Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -222,18 +153,19 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if (!storagePermissionGranted()) {
                     ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 2);
-                } else {
+                }
+                if (storagePermissionGranted()) {
                     final String resultLog = FileUtil.writeFile(
                             filenameLog,
                             (new SqliteUtil(MainActivity.this)).selectAllLogs()
                     );
-                    Toast.makeText(MainActivity.this, resultLog, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, getString(R.string.saved) + resultLog, Toast.LENGTH_SHORT).show();
 
                     final String resultExc = FileUtil.writeFile(
                             filenameExc,
                             (new SqliteUtil(MainActivity.this)).selectAllExceptionAreas()
                     );
-                    Toast.makeText(MainActivity.this, resultExc, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, getString(R.string.saved) + resultExc, Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -246,15 +178,33 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceive(Context context, Intent intent) {
                 final Location location = intent.getParcelableExtra("location");
-                final Date date = new Date();
-                final String row = location.getLatitude() + "," + location.getLongitude() + "; " + df.format(date);
-                adapter.insert(row, 0);
+                final String row = location.getLatitude() + "," + location.getLongitude() + "; " + df.format(new Date());
+                resultText.setText(row);
             }
         };
         LocalBroadcastManager.getInstance(this).registerReceiver(
                 locationUpdateReceiver,
                 new IntentFilter("LocationUpdated")
         );
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.activity_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_setting:
+                final Intent intent = new android.content.Intent(this, PrefActivity.class);
+                startActivity(intent);
+                return true;
+        }
+        return false;
     }
 
     @Override
@@ -272,7 +222,8 @@ public class MainActivity extends AppCompatActivity {
                 loc = ((Loc.LocationServiceBinder) service).getService();
                 if (!locationPermissionGranted()) {
                     ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-                } else {
+                }
+                if (locationPermissionGranted()) {
                     loc.startUpdatingLocation();
                 }
             }

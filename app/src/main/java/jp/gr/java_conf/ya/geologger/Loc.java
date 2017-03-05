@@ -22,13 +22,20 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.Date;
 
+import static jp.gr.java_conf.ya.geologger.SqliteUtil.df;
+
 public class Loc extends Service implements LocationListener, GpsStatus.Listener {
-    // private ArrayList<Location> locationList;
+    private ArrayList<Location> locationList;
+    private boolean enable_add_random_error_to_offset;
+    private boolean enable_exception_area;
+    private boolean enable_offset;
     private boolean flgLocationManager, flgLogging;
+    private double exception_areas_radius;
+    private double maximum_value_of_random_error_in_offset;
     private double offset_lat;
     private double offset_lng;
-    private static final int GPS_INTERVAL = -1;
-    private static final int GPS_DISTANCE = -1;
+    private int gps_distance;
+    private int gps_interval;
     private LocationManager locationManager;
     private final LocationServiceBinder binder = new LocationServiceBinder();
     private SqliteUtil sqliteUtil;
@@ -37,6 +44,65 @@ public class Loc extends Service implements LocationListener, GpsStatus.Listener
         public Loc getService() {
             return Loc.this;
         }
+    }
+
+    private Location addOffset(final Location location, final boolean containsError) {
+        if (containsError) {
+            offset_lat += maximum_value_of_random_error_in_offset * Math.random();
+            offset_lng += maximum_value_of_random_error_in_offset * Math.random();
+        }
+
+        final Location newLocation = new Location(location);
+        newLocation.setLatitude(location.getLatitude() + offset_lat);
+        newLocation.setLatitude(location.getLongitude() + offset_lng);
+        return newLocation;
+    }
+
+    private boolean init() {
+        locationList = new ArrayList<>();
+
+        // 設定値
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        enable_add_random_error_to_offset = sharedPreferences.getBoolean("enable_add_random_error_to_offset", false);
+        enable_exception_area = sharedPreferences.getBoolean("enable_exception_area", false);
+        enable_offset = sharedPreferences.getBoolean("enable_offset", false);
+
+        try {
+            exception_areas_radius = Double.parseDouble(sharedPreferences.getString("exception_areas_radius", "0.0"));
+        } catch (Exception e) {
+            exception_areas_radius = 0;
+        }
+
+
+        try {
+            gps_distance = Integer.parseInt(sharedPreferences.getString("gps_distance", "-1"));
+        } catch (Exception e) {
+            gps_distance = -1;
+        }
+        try {
+            gps_interval = Integer.parseInt(sharedPreferences.getString("gps_interval", "-1"));
+        } catch (Exception e) {
+            gps_interval = -1;
+        }
+
+        try {
+            maximum_value_of_random_error_in_offset = Double.parseDouble(sharedPreferences.getString("maximum_value_of_random_error_in_offset", "0.0"));
+        } catch (Exception e) {
+            maximum_value_of_random_error_in_offset = 0;
+        }
+        try {
+            offset_lat = Double.parseDouble(sharedPreferences.getString("offset_lat", "0.0"));
+        } catch (Exception e) {
+            offset_lat = 0;
+        }
+        try {
+            offset_lng = Double.parseDouble(sharedPreferences.getString("offset_lng", "0.0"));
+        } catch (Exception e) {
+            offset_lng = 0;
+        }
+
+        return true;
     }
 
     private void notifyLocationProviderStatusUpdated(boolean isLocationProviderAvailable) {
@@ -51,7 +117,8 @@ public class Loc extends Service implements LocationListener, GpsStatus.Listener
     public void onCreate() {
         flgLocationManager = false;
         flgLogging = false;
-        // locationList = new ArrayList<>();
+
+        init();
     }
 
     @Override
@@ -72,37 +139,27 @@ public class Loc extends Service implements LocationListener, GpsStatus.Listener
 
     @Override
     public void onLocationChanged(Location location) {
+        if (sqliteUtil == null)
+            sqliteUtil = new SqliteUtil(this);
+
         if (flgLogging) {
-            // locationList.add(location);
+            if ((enable_exception_area && !sqliteUtil.isContainsExceptionArea(location, exception_areas_radius)) // 例外区域有効かつ例外区域に含まれていない
+                    || (!enable_exception_area)) {
+                if (enable_offset)
+                    location = addOffset(location, enable_add_random_error_to_offset);
 
-            final SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-            try {
-                offset_lat = Double.parseDouble(sharedPreferences.getString("offset_lat", "0.0"));
-            }catch (Exception e){
-                offset_lat = 0;
-            }
-            try {
-                offset_lng = Double.parseDouble(sharedPreferences.getString("offset_lng", "0.0"));
-            }catch (Exception e){
-                offset_lng = 0;
-            }
-            if(offset_lat != 0 || offset_lng != 0) {
-                final Location newLocation = new Location(location);
-                newLocation.setLatitude(location.getLatitude() + offset_lat);
-                newLocation.setLatitude(location.getLongitude() + offset_lng);
-                location = newLocation;
-            }
+                // ArrayListに追加
+                locationList.add(location);
 
-            // Intent発行
-            final Intent intent = new Intent("LocationUpdated");
-            intent.putExtra("location", location);
-            LocalBroadcastManager.getInstance(this.getApplication()).sendBroadcast(intent);
+                // Intent発行
+                final Intent intent = new Intent("LocationUpdated");
+                intent.putExtra("location", location);
+                LocalBroadcastManager.getInstance(this.getApplication()).sendBroadcast(intent);
 
-            // SQLite DBに挿入
-            if (sqliteUtil == null)
-                sqliteUtil = new SqliteUtil(this);
-            final Date date = new Date();
-            sqliteUtil.insertLog(date, location);
+                // SQLite DBに挿入
+                final Date date = new Date();
+                sqliteUtil.insertLog(date, location);
+            }
         }
     }
 
@@ -159,7 +216,7 @@ public class Loc extends Service implements LocationListener, GpsStatus.Listener
 
         if (flgLocationManager == false) {
             flgLocationManager = true;
-            // locationList.clear();
+            locationList.clear();
 
             if (locationManager == null)
                 locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -174,7 +231,7 @@ public class Loc extends Service implements LocationListener, GpsStatus.Listener
                 criteria.setSpeedRequired(false);
                 criteria.setVerticalAccuracy(Criteria.ACCURACY_HIGH);
                 locationManager.addGpsStatusListener(this);
-                locationManager.requestLocationUpdates(GPS_INTERVAL, GPS_DISTANCE, criteria, this, null);
+                locationManager.requestLocationUpdates(gps_interval, gps_distance, criteria, this, null);
             } catch (SecurityException e) {
             } catch (RuntimeException e) {
             } catch (Exception e) {

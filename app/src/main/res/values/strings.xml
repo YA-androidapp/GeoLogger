@@ -16,14 +16,23 @@
     <string name="exception_area_center_lng">例外区域中心座標の経度</string>
     <string name="exception_area_radius">例外区域の半径</string>
     <string name="exception_area_radius_summary">例外区域の半径を指定します(単位：メートル)</string>
+    <string name="gps_distance">最小移動距離</string>
+    <string name="gps_distance_summary">設定値よりも変位が大きいときに測位結果を出力します(単位：メートル)</string>
+    <string name="gps_interval">最小計測間隔</string>
+    <string name="gps_interval_summary">設定値よりも経過秒数が大きいときに測位結果を出力します(単位：秒)</string>
     <string name="insert_exception_area">例外区域を追加</string>
     <string name="offset_lat">緯度オフセット</string>
     <string name="offset_lat_summary">測位した緯度に加えるオフセットを指定します</string>
     <string name="offset_lng">経度オフセット</string>
     <string name="offset_lng_summary">測位した経度に加えるオフセットを指定します</string>
     <string name="ok">OK</string>
+    <string name="one">1</string>
+    <string name="maximum_value_of_random_error_in_offset">オフセットに含ませる誤差の最大値(単位：度)</string>
+    <string name="minus_one">-1</string>
+    <string name="saved">保存しました：</string>
+    <string name="setting">設定</string>
     <string name="start">開始</string>
     <string name="stop">停止</string>
     <string name="write">書き出し</string>
+    <string name="zero">0</string>
 </resources><!-- Copyright (c) 2017 YA <ya.androidapp@gmail.com> All rights reserved. This software includes the work that is distributed in the Apache License 2.0 -->
-

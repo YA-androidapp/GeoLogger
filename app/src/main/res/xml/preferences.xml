@@ -1,5 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <EditTextPreference
+        android:defaultValue="@string/minus_one"
+        android:dialogTitle="@string/gps_interval"
+        android:inputType="numberSigned"
+        android:key="gps_interval"
+        android:summary="@string/gps_interval_summary"
+        android:title="@string/gps_interval" />
+
+    <EditTextPreference
+        android:defaultValue="@string/minus_one"
+        android:dialogTitle="@string/gps_distance"
+        android:inputType="numberSigned"
+        android:key="gps_distance"
+        android:summary="@string/gps_distance_summary"
+        android:title="@string/gps_distance" />
 
     <CheckBoxPreference
         android:key="enable_offset"
@@ -7,6 +23,7 @@
         android:title="@string/enable_offset" />
 
     <EditTextPreference
+        android:defaultValue="@string/zero"
         android:dialogTitle="@string/offset_lat"
         android:inputType="numberSigned|numberDecimal"
         android:key="offset_lat"
@@ -14,6 +31,7 @@
         android:title="@string/offset_lat" />
 
     <EditTextPreference
+        android:defaultValue="@string/zero"
         android:dialogTitle="@string/offset_lng"
         android:inputType="numberSigned|numberDecimal"
         android:key="offset_lng"
@@ -25,12 +43,20 @@
         android:summary="@string/enable_add_random_error_to_offset_summary"
         android:title="@string/enable_add_random_error_to_offset" />
 
+    <EditTextPreference
+        android:defaultValue="@string/zero"
+        android:dialogTitle="@string/maximum_value_of_random_error_in_offset"
+        android:inputType="numberSigned|numberDecimal"
+        android:key="maximum_value_of_random_error_in_offset"
+        android:title="@string/maximum_value_of_random_error_in_offset" />
+
     <CheckBoxPreference
         android:key="enable_exception_area"
         android:summary="@string/enable_exception_area_summary"
         android:title="@string/enable_exception_area" />
 
     <EditTextPreference
+        android:defaultValue="@string/one"
         android:dialogTitle="@string/exception_area_radius"
         android:inputType="numberDecimal"
         android:key="exception_area_radius"

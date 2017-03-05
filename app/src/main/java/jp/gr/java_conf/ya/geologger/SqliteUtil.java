@@ -24,10 +24,10 @@ public class SqliteUtil extends SQLiteOpenHelper {
 
     private static final String COL_COS_LAT = "coslat";
     private static final String COL_COS_LNG = "coslng";
-    private static final String COL_DATE = "date";
-    private static final String COL_ID = "_id";
-    private static final String COL_LAT = "lat";
-    private static final String COL_LNG = "lng";
+    public static final String COL_DATE = "date";
+    public static final String COL_ID = "_id";
+    public static final String COL_LAT = "lat";
+    public static final String COL_LNG = "lng";
     private static final String COL_SIN_LAT = "sinlat";
     private static final String COL_SIN_LNG = "sinlng";
 
@@ -92,6 +92,31 @@ public class SqliteUtil extends SQLiteOpenHelper {
         db.delete(TABLE_NAME_LOG, null, null);
     }
 
+    public String getUrl(final String id){
+        final StringBuilder sb = new StringBuilder();
+        final StringBuilder sb2 = new StringBuilder();
+
+        sb.append("select " + COL_LAT + " , " + COL_LNG);
+        sb.append(" from " + TABLE_NAME_LOG + " ");
+        sb.append(" where " + COL_ID + " = " + id);
+
+        final SQLiteDatabase db = getReadableDatabase();
+        try {
+            final Cursor cursor = db.rawQuery(sb.toString(), null);
+            cursor.moveToFirst();
+            for (int i = 0; i < cursor.getCount(); i++) {
+                sb2.append(cursor.getDouble(0)).append(",");
+                sb2.append(cursor.getDouble(1)).append("");
+                cursor.moveToNext();
+            }
+            cursor.close();
+        } finally {
+            db.close();
+        }
+
+        return sb2.toString();
+    }
+
     // 例外区域を追加
     public void insertExceptionArea(double lat, double lng) {
         final SQLiteDatabase db = getReadableDatabase();
@@ -130,23 +155,23 @@ public class SqliteUtil extends SQLiteOpenHelper {
     }
 
     // 非記録エリア判定用
-    public int searchNearCount(Location location, double range_km) {
+    public boolean isContainsExceptionArea(Location location, double range_km) {
         final SQLiteDatabase db = getReadableDatabase();
         try {
-            final String sql = searchNearQuery(location, range_km);
+            final String sql = searchNearQuery(location, range_km, false);
             final Cursor cursor = db.rawQuery(sql, null);
             final int count = cursor.getColumnCount();
             db.close();
-            return count;
+            return (count > 0);
         } catch (Exception e) {
             db.close();
-            return 0;
+            return false;
         }
     }
 
     // 非記録エリア判定用
     // http://strai.x0.com/?p=200
-    public String searchNearQuery(Location location, double range_km) {
+    public String searchNearQuery(Location location, double range_km, boolean multi) {
         final double km_cos = Math.cos(range_km / 6371);    // 距離基準cos値
         final double radlat = Math.toRadians(location.getLatitude()), radlong = Math.toRadians(location.getLongitude());
         final double qsinlat = Math.sin(radlat), qcoslat = Math.cos(radlat);
@@ -157,7 +182,11 @@ public class SqliteUtil extends SQLiteOpenHelper {
         sb.append("(" + COL_SIN_LAT + "*" + qsinlat + " + " + COL_COS_LAT + "*" + qcoslat + "*(" + COL_COS_LNG + "*" + qcoslng + "+" + COL_SIN_LNG + "*" + qsinlng + ")) as distcos ");
         sb.append(" from " + TABLE_NAME_EXCEPTION + " ");
         sb.append(" where distcos > " + km_cos); // 値が大きい方が近い
-        sb.append(" order by distcos desc ");
+        if(multi) {
+            sb.append(" order by distcos desc ");
+        }else{
+            sb.append(" limit 1");
+        }
         return sb.toString();
     }
 

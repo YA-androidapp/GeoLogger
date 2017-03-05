@@ -51,18 +51,18 @@
 
             <EditText
                 android:id="@+id/exceptionAreaCenterLat"
-                android:hint="@string/exception_area_center_lat"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:hint="@string/exception_area_center_lat"
                 android:inputType="numberSigned|numberDecimal" />
 
             <EditText
                 android:id="@+id/exceptionAreaCenterLng"
-                android:hint="@string/exception_area_center_lng"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:hint="@string/exception_area_center_lng"
                 android:inputType="numberSigned|numberDecimal" />
 
             <Button
@@ -92,12 +92,11 @@
                 android:text="@string/clear_all_exception_areas" />
         </LinearLayout>
 
-        <ListView
-            android:id="@+id/listView1"
+        <EditText
+            android:id="@+id/resultText"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentTop="true" />
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
     </LinearLayout>
 
 </RelativeLayout><!-- Copyright (c) 2017 YA <ya.androidapp@gmail.com> All rights reserved. This software includes the work that is distributed in the Apache License 2.0 -->
